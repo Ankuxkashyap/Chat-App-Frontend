@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, UserRoundPlus } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth";
+import { authApi } from "@/lib/api/auth";
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user } = useAuthStore();
+  const { user, setUser, logout } = useAuthStore();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,7 +20,18 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await authApi.getUser();
+        setUser(data.user);
+      } catch (err: unknown) {
+        logout();
+      }
+    };
+
+    fetchUser();
+  }, [setUser, logout]);
 
   return (
     <nav
@@ -36,9 +48,11 @@ export default function Navbar() {
           <div className=" md:flex items-center gap-3">
             {user ? (
               <>
-                <Button variant="ghost" size="icon">
-                  <Search className="h-5 w-5" />
-                </Button>
+                <Link href="/add-friend">
+                  <Button variant="ghost" size="icon">
+                    <UserRoundPlus className="h-5 w-5" />
+                  </Button>
+                </Link>
 
                 <Button variant="ghost" size="icon">
                   <Bell className="h-5 w-5" />
