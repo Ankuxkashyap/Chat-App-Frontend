@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
+import { requestApi } from "@/lib/api/request";
 
 const mockRequests = [
   {
@@ -36,6 +37,10 @@ const mockRequests = [
   },
 ];
 
+
+
+
+
 export default function FollowRequests() {
   const [requests, setRequests] = useState(mockRequests);
 
@@ -44,6 +49,18 @@ export default function FollowRequests() {
   const handleReject = (id: number) =>
     setRequests((prev) => prev.filter((u) => u.id !== id));
 
+  const getRequests = async () => {
+    try {
+    const res = await requestApi.get();
+    console.log(res)
+      return res.data;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  useEffect(()=>{
+    getRequests()
+  },[])
   return (
     <div className="min-h-screen bg-white dark:bg-black px-4 py-10 max-w-md mx-auto">
       <div className="mb-8">
