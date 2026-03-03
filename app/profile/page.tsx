@@ -30,17 +30,19 @@ import {
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api/auth";
 import { UserT } from "@/lib/types/user";
+import { friendApi } from "@/lib/api/friend";
+import { messageApi } from "@/lib/api/message";
 
 type Status = "online" | "away" | "offline";
 type FriendFilter = "all" | "online" | "offline";
 
 interface Friend {
-  id: number;
+  id: string;
   name: string;
   username: string;
   status: Status;
-  initials: string;
-  mutualFriends: number;
+  // initials: string;
+  // mutualFriends: number;
 }
 
 interface Profile {
@@ -51,7 +53,7 @@ interface Profile {
   website: string;
 }
 
-const ALL_FRIENDS: Friend[] = [
+const ALL_FRIENDS = [
   {
     id: 1,
     name: "Sarah Kim",
@@ -198,6 +200,7 @@ export default function ProfilePage() {
 
   const [user, setUser] = useState<UserT | null>(null);
   const [draft, setDraft] = useState<Profile>(DEFAULT_PROFILE);
+  const [friend,setFriend] = useState<Friend[]>([])
 
   const save = async () => {
     try {
@@ -262,10 +265,10 @@ export default function ProfilePage() {
     (f) => f.status === "offline",
   ).length;
 
-  const handleRemove = (id: number) => {
-    setRemoved((prev) => [...prev, id]);
-    if (paginated.length === 1 && safePage > 1) setPage(safePage - 1);
-  };
+  // const handleRemove = (id: string) => {
+  //   setRemoved((prev) => [...prev, id]);
+  //   if (paginated.length === 1 && safePage > 1) setPage(safePage - 1);
+  // };
 
   const filterTabs: { id: FriendFilter; label: string; count: number }[] = [
     { id: "all", label: "All", count: activeFriends.length },
@@ -273,6 +276,24 @@ export default function ProfilePage() {
     { id: "offline", label: "Offline", count: offlineCount },
   ];
 
+  const fetchFriends = async()=>{
+    try{
+      const res = await friendApi.get(1,6)
+      setFriend(res.data)
+    }catch(err){
+      console.log(err)
+    }
+  }
+  const handleMessage = async (id: string) => {
+    console.log(id)
+    try{
+      const res = await messageApi.createConversation(id)
+      console.log(res)
+      // router.push(`/message/${res.id}`)
+    }catch(err){
+      console.log(err)
+    }
+  }
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -291,7 +312,7 @@ export default function ProfilePage() {
         setLoading(false);
       }
     };
-
+    fetchFriends();
     fetchProfile();
   }, []);
 
@@ -471,7 +492,7 @@ export default function ProfilePage() {
                   <h2 className="text-sm font-bold">
                     Friends
                     <span className="font-normal text-muted-foreground ml-1.5">
-                      {activeFriends.length}
+                      {friend.length}
                     </span>
                   </h2>
 
@@ -544,13 +565,13 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <div>
-                      {paginated.map((f, i) => (
+                      {friend.map((f, i) => (
                         <div key={f.id}>
                           <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150">
                             <div className="relative shrink-0">
                               <Avatar className="w-9 h-9 sm:w-10 sm:h-10 rounded-[11px] sm:rounded-[12px]">
                                 <AvatarFallback className="rounded-[9px] sm:rounded-[10px] text-xs font-black bg-muted text-foreground">
-                                  {f.initials}
+                                  {getInitials(f.name)}
                                 </AvatarFallback>
                               </Avatar>
                               <StatusDot status={f.status} />
@@ -562,11 +583,11 @@ export default function ProfilePage() {
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
                                 @{f.username}
-                                {f.mutualFriends > 0 && (
+                                {/* {f.mutualFriends > 0 && (
                                   <span className="ml-1.5 opacity-50">
                                     · {f.mutualFriends} mutual
                                   </span>
-                                )}
+                                )} */}
                               </p>
                             </div>
 
@@ -590,6 +611,7 @@ export default function ProfilePage() {
                                     variant="outline"
                                     size="sm"
                                     className="h-8 gap-1.5 text-xs hidden sm:flex"
+                                    onClick={()=>handleMessage(f.id)}
                                   >
                                     <MessageCircle size={13} /> Message
                                   </Button>
@@ -602,6 +624,7 @@ export default function ProfilePage() {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0 sm:hidden"
+                                onClick={() => handleMessage(f.id)}
                               >
                                 <MessageCircle size={13} />
                               </Button>
@@ -612,7 +635,7 @@ export default function ProfilePage() {
                                     variant="outline"
                                     size="sm"
                                     className="h-8 w-8 p-0 hover:border-destructive hover:text-destructive transition-colors"
-                                    onClick={() => handleRemove(f.id)}
+                                    // onClick={() => handleRemove(f.id)}
                                   >
                                     <UserMinus size={13} />
                                   </Button>
@@ -623,7 +646,7 @@ export default function ProfilePage() {
                               </Tooltip>
                             </div>
                           </div>
-                          {i < paginated.length - 1 && <Separator />}
+                          {i < friend.length - 1 && <Separator />}
                         </div>
                       ))}
                     </div>

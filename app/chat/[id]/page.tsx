@@ -3,33 +3,63 @@
 import { useParams, useRouter } from "next/navigation";
 import { ChatView } from "@/components/ChatView";
 import { ChatSidebar, Contact } from "@/components/ChatSidebar";
-
-const mockContact = (id: number): Contact => ({
-  id,
-  name: "Jordan Lee",
-  username: "jordanlee",
-  avatar: `https://i.pravatar.cc/150?img=${id % 70}`,
-  lastMessage: "Hey!",
-  lastMessageTime: "1h",
-  unreadCount: 0,
-  online: true,
-});
+import { useState, useEffect } from "react";
+import { messageApi } from "@/lib/api/message";
+import { useAuthStore } from "@/store/auth";
 
 export default function ChatPage() {
   const { id } = useParams();
   const router = useRouter();
-  const contact = mockContact(Number(id));
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(true);
+  const {user} =  useAuthStore() 
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchConversation = async () => {
+      try {
+        setLoading(true);
+        const res = await messageApi.getConversations()
+        const data = res.data?.data ?? res.data;
+        setContact(data);
+      } catch (err) {
+        console.error("Failed to fetch conversation:", err);
+        // router.push("/chat");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConversation();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-black/20 dark:bg-white/20 animate-bounce"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!contact) return null;
 
   return (
     <div className="h-[calc(100vh-64px)] flex bg-white dark:bg-black overflow-hidden">
       <div className="hidden md:flex w-80 shrink-0">
         <ChatSidebar
-          selectedId={contact.id}
-          onSelect={(c) => router.push(`/chat/${c.id}`)}
+          selectedId={contact.conversationId}
+          onSelect={(c) => router.push(`/chat/${c.conversationId}`)}
         />
       </div>
       <div className="flex flex-1">
-        <ChatView contact={contact} onBack={() => router.back()} />
+        <ChatView contact={contact} currentUserId={user?.id} onBack={() => router.back()} />
       </div>
     </div>
   );

@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Phone, Video, MoreHorizontal, Send } from "lucide-react";
 import { Contact } from "@/components/ChatSidebar";
+import { useSocket } from "@/hooks/useSocket";
+import { messageApi } from "@/lib/api/message";
+import { useParams } from "next/navigation";
+
+type ApiMessage = {
+  id: number;
+  content: string;
+  senderId: string;
+  conversationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type Message = {
   id: number;
@@ -11,43 +23,97 @@ type Message = {
   time: string;
 };
 
-const seedMessages = (contact: Contact): Message[] => [
-  { id: 1, text: "Hey! How's it going?", mine: false, time: "9:00 AM" },
-  { id: 2, text: "Pretty good, you?", mine: true, time: "9:01 AM" },
-  {
-    id: 3,
-    text: contact.lastMessage,
-    mine: false,
-    time: contact.lastMessageTime,
-  },
-];
-
 type Props = {
   contact: Contact;
   onBack: () => void;
+  currentUserId: string; 
 };
 
-export function ChatView({ contact, onBack }: Props) {
-  const [messages, setMessages] = useState<Message[]>(seedMessages(contact));
-  const [input, setInput] = useState("");
+const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
+  id: msg.id,
+  text: msg.content,
+  mine: msg.senderId === currentUserId,
+  time: new Date(msg.createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  }),
+});
 
-  const send = () => {
+export function ChatView({ contact, onBack, currentUserId }: Props) {
+  const { id } = useParams();
+  const conversationId = id as string;
+  const socket = useSocket();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const fetchMessages = async () => {
+      try {
+        const res = await messageApi.getmessage(conversationId);
+        const data = Array.isArray(res?.data)
+          ? res?.data
+          : Array.isArray(res?.data)
+            ? res?.data
+            : [];
+        setMessages(data.map((msg: ApiMessage) => mapApiMessage(msg, currentUserId)));
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+      }
+    };
+
+    fetchMessages();
+
+    socket.emit("joinConversation", conversationId);
+
+    socket.on("newMessage", (msg: ApiMessage) => {
+      setMessages((prev) => [...prev, mapApiMessage(msg, currentUserId)]);
+    });
+
+    return () => {
+      socket.off("newMessage");
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = async () => {
     if (!input.trim()) return;
+    const messageData = input.trim();
     const now = new Date();
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now(), text: input.trim(), mine: true, time },
-    ]);
+
+    const optimisticMessage: Message = {
+      id: Date.now(),
+      text: messageData,
+      mine: true,
+      time,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
     setInput("");
+
+    try {
+      await messageApi.sendMessage(conversationId, messageData);
+      socket.emit("sendMessage", {
+        conversationId,
+        content: messageData,
+      });
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-black h-[calc(100vh-64px)]">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-black/8 dark:border-white/8">
         <button
           onClick={onBack}
@@ -58,21 +124,18 @@ export function ChatView({ contact, onBack }: Props) {
 
         <div className="relative shrink-0">
           <img
-            src={contact.avatar}
-            alt={contact.name}
+            src={contact.user?.avatar || "/placeholder.svg"}
+            alt={contact.user?.name}
             className="w-9 h-9 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
           />
-          {contact.online && (
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black" />
-          )}
         </div>
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-black dark:text-white text-sm tracking-tight">
-            {contact.name}
+            {contact.user?.name}
           </p>
           <p className="text-black/40 dark:text-white/40 text-xs">
-            {contact.online ? "Online" : "Offline"}
+            {contact.user?.username}
           </p>
         </div>
 
@@ -88,8 +151,7 @@ export function ChatView({ contact, onBack }: Props) {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -115,9 +177,9 @@ export function ChatView({ contact, onBack }: Props) {
             </div>
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="px-4 py-3 border-t border-black/8 dark:border-white/8">
         <div className="flex items-center gap-2">
           <input
