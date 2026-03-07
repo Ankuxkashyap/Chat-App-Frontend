@@ -5,12 +5,25 @@ import { Search, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { messageApi } from "@/lib/api/message";
 import { UserT } from "@/lib/types/user";
+import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 
 export type Contact = {
   conversationId: string;
-  user: UserT;
-  lastMessage: string | null;
-  updatedAt: Date;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    avatar?: string;
+  };
+  lastMessage: {
+    id: string;
+    content: string;
+    senderId: string;
+    conversationId: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  updatedAt: string;
 };
 
 // const generateContacts = (start: number, count: number): Contact[] => {
@@ -62,7 +75,7 @@ export type Contact = {
 // };
 
 type Props = {
-  selectedId: string | null; 
+  selectedId: string | null;
   onSelect: (contact: Contact) => void;
 };
 
@@ -74,6 +87,8 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
   const loaderRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const onlineUsers = useOnlineUsers();
+  
 
   useEffect(() => {
     setIsMounted(true);
@@ -187,27 +202,26 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
               <button
                 key={contact.conversationId}
                 onClick={() => handleSelect(contact)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 text-left ${
-                  selectedId === contact.conversationId 
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 text-left ${selectedId === contact.conversationId
                     ? "bg-black/5 dark:bg-white/5"
                     : "hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                }`}
+                  }`}
               >
                 <div className="relative shrink-0">
-                  {contact.user.avatar ?  <img
+                  {contact.user.avatar ? <img
                     src={contact.user?.avatar}
                     alt={contact.user?.name}
                     className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
                   /> :
-                  <div
-                  className="flex w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5 items-center justify-center text-xl font-semibold"
-                  >
-                    {getInitials(contact.user.name)}
-                  </div>
-                }
-                  {/* {isMounted && (
-                    <span className={`${contact.online ? " " : " hidden "} absolute bottom-0 right-0 w-3 h-3 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black`} />
-                  )} */}
+                    <div
+                      className="flex w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5 items-center justify-center text-xl font-semibold"
+                    >
+                      {getInitials(contact.user.name)}
+                    </div>
+                  }
+                  {onlineUsers.has(contact.user.id) && (
+                    <span className={`absolute bottom-0 right-0 w-3 h-3 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black`} />
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -223,7 +237,9 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
                     <p className="text-black/40 dark:text-white/40 text-xs truncate">
-                      {contact.lastMessage}
+                      {typeof contact.lastMessage === "object"
+                        ? contact.lastMessage?.content
+                        : contact.lastMessage}
                     </p>
                     {/* {contact.unreadCount > 0 && (
                       <span className="ml-2 shrink-0 w-5 h-5 flex items-center justify-center bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-full">

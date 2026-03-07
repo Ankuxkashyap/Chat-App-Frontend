@@ -8,7 +8,7 @@ import { messageApi } from "@/lib/api/message";
 import { useParams } from "next/navigation";
 
 type ApiMessage = {
-  id: number;
+  id: string;
   content: string;
   senderId: string;
   conversationId: string;
@@ -17,7 +17,7 @@ type ApiMessage = {
 };
 
 type Message = {
-  id: number;
+  id: string;
   text: string;
   mine: boolean;
   time: string;
@@ -26,7 +26,7 @@ type Message = {
 type Props = {
   contact: Contact;
   onBack: () => void;
-  currentUserId: string; 
+  currentUserId: string;
 };
 
 const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
@@ -46,18 +46,14 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!conversationId) return;
 
     const fetchMessages = async () => {
       try {
         const res = await messageApi.getmessage(conversationId);
-        const data = Array.isArray(res?.data)
-          ? res?.data
-          : Array.isArray(res?.data)
-            ? res?.data
-            : [];
+        const raw = res?.data?.data ?? res?.data ?? res ?? [];
+        const data = Array.isArray(raw) ? raw : [];
         setMessages(data.map((msg: ApiMessage) => mapApiMessage(msg, currentUserId)));
       } catch (err) {
         console.error("Failed to fetch messages:", err);
@@ -91,7 +87,7 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
     });
 
     const optimisticMessage: Message = {
-      id: Date.now(),
+      id: `optimistic-${Date.now()}`,
       text: messageData,
       mine: true,
       time,

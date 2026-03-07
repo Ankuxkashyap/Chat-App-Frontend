@@ -4,9 +4,11 @@ import { useState } from "react";
 import { ChatSidebar, Contact } from "@/components/ChatSidebar";
 import { ChatView } from "@/components/ChatView";
 import { EmptyChat } from "@/components/EmptyChat";
+import { useAuthStore } from "@/store/auth";
 
 export default function Home() {
   const [selected, setSelected] = useState<Contact | null>(null);
+  const {user} = useAuthStore()
   return (
     <div className="w-full h-[calc(100vh-64px)] flex bg-white dark:bg-black overflow-hidden">
       <div className="w-full md:w-80 md:flex shrink-0">
@@ -14,7 +16,7 @@ export default function Home() {
       </div>
       <div className="hidden md:flex flex-1">
         {selected ? (
-          <ChatView contact={selected} onBack={() => setSelected(null)} />
+          <ChatView contact={selected} onBack={() => setSelected(null)} currentUserId={user?.id ?? ""} />
         ) : (
           <EmptyChat />
         )}

@@ -12,19 +12,20 @@ export default function ChatPage() {
   const router = useRouter();
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
-  const {user} =  useAuthStore() 
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (!id) return;
     const fetchConversation = async () => {
       try {
         setLoading(true);
-        const res = await messageApi.getConversations()
-        const data = res.data?.data ?? res.data;
-        setContact(data);
+        const res = await messageApi.getConversations();
+        const raw = res.data?.data ?? res.data ?? [];
+        const data: Contact[] = Array.isArray(raw) ? raw : [];
+        const found = data.find((c) => c.conversationId === id);
+        setContact(found ?? null);
       } catch (err) {
         console.error("Failed to fetch conversation:", err);
-        // router.push("/chat");
       } finally {
         setLoading(false);
       }
@@ -59,7 +60,11 @@ export default function ChatPage() {
         />
       </div>
       <div className="flex flex-1">
-        <ChatView contact={contact} currentUserId={user?.id} onBack={() => router.back()} />
+        <ChatView
+          contact={contact}
+          currentUserId={user?.id ?? ""}
+          onBack={() => router.back()}
+        />
       </div>
     </div>
   );

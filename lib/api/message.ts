@@ -1,6 +1,6 @@
 import api from "../axios";
 
-interface MessageData {
+export interface MessageData {
     id: string,
     content: string
     senderId: string
@@ -9,7 +9,7 @@ interface MessageData {
     updatedAt: Date
 }
 
-interface MessageResponse {
+export  interface MessageResponse {
     data: MessageData
 }
 
