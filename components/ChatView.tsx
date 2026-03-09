@@ -48,6 +48,7 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!conversationId) return;
+    if(!socket) return
 
     const fetchMessages = async () => {
       try {
@@ -71,7 +72,7 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
     return () => {
       socket.off("newMessage");
     };
-  }, [conversationId]);
+  }, [conversationId,socket]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

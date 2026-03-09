@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { messageApi } from "@/lib/api/message";
 import { UserT } from "@/lib/types/user";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
+import { Socket } from "socket.io-client";
 
 export type Contact = {
   conversationId: string;
@@ -163,7 +164,8 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
       c.user.name?.toLowerCase().includes(search.toLowerCase())
     );
   });
-
+  console.log("[ChatSidebar] onlineUsers:", [...onlineUsers]);
+console.log("[ChatSidebar] contact userIds:", filtered.map(c => c.user.id));
   return (
     <div className="flex flex-col h-full bg-white dark:bg-black border-r border-black/8 dark:border-white/8 w-full">
       <div className="px-5 pt-8 pb-4">
