@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Phone, Video, MoreHorizontal, Send } from "lucide-react";
 import { Contact } from "@/components/ChatSidebar";
 import { useSocket } from "@/hooks/useSocket";
+import { useTyping } from "@/hooks/useTyping";
 import { messageApi } from "@/lib/api/message";
 import { useParams } from "next/navigation";
+import { getDateLabel } from '@/helper/getDateLabel'
 
 type ApiMessage = {
   id: string;
@@ -20,6 +22,7 @@ type Message = {
   id: string;
   text: string;
   mine: boolean;
+  createdAt: string;
   time: string;
 };
 
@@ -27,28 +30,61 @@ type Props = {
   contact: Contact;
   onBack: () => void;
   currentUserId: string;
+  currentUsername: string;
 };
 
 const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
   id: msg.id,
   text: msg.content,
   mine: msg.senderId === currentUserId,
+  createdAt: msg.createdAt,
   time: new Date(msg.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   }),
 });
 
-export function ChatView({ contact, onBack, currentUserId }: Props) {
+export function ChatView({ contact, onBack, currentUserId, currentUsername }: Props) {
   const { id } = useParams();
   const conversationId = id as string;
   const socket = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [isOnline, setIsOnline] = useState(false);
+
   useEffect(() => {
-    if (!conversationId) return;
-    if(!socket) return
+    if (!socket) return;
+
+    socket.emit("getOnlineUsers");
+
+    socket.on("onlineUsers", (users: string[]) => {
+      setIsOnline(users.includes(contact.user?.id));
+    });
+
+    socket.on("userOnline", ({ userId }: { userId: string }) => {
+      if (userId === contact.user?.id) setIsOnline(true);
+    });
+
+    socket.on("userOffline", ({ userId }: { userId: string }) => {
+      if (userId === contact.user?.id) setIsOnline(false);
+    });
+
+    return () => {
+      socket.off("onlineUsers");
+      socket.off("userOnline");
+      socket.off("userOffline");
+    };
+  }, [socket, contact.user?.id]);
+
+  const { typingUsers, onInputChange, stopTyping } = useTyping(
+    socket,
+    conversationId,
+    { id: currentUserId, username: currentUsername }
+  );
+
+  useEffect(() => {
+    if (!conversationId || !socket) return;
 
     const fetchMessages = async () => {
       try {
@@ -62,7 +98,6 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
     };
 
     fetchMessages();
-
     socket.emit("joinConversation", conversationId);
 
     socket.on("newMessage", (msg: ApiMessage) => {
@@ -70,9 +105,11 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
     });
 
     return () => {
+      socket.emit("leaveConversation", { conversationId });
+      console.log("[ChatView] left room:", conversationId);
       socket.off("newMessage");
     };
-  }, [conversationId,socket]);
+  }, [conversationId, socket]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,10 +119,7 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
     if (!input.trim()) return;
     const messageData = input.trim();
     const now = new Date();
-    const time = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const optimisticMessage: Message = {
       id: `optimistic-${Date.now()}`,
@@ -96,13 +130,11 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
 
     setMessages((prev) => [...prev, optimisticMessage]);
     setInput("");
+    stopTyping();
 
     try {
       await messageApi.sendMessage(conversationId, messageData);
-      socket.emit("sendMessage", {
-        conversationId,
-        content: messageData,
-      });
+      socket.emit("sendMessage", { conversationId, content: messageData });
     } catch (err) {
       console.error("Failed to send message:", err);
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
@@ -120,11 +152,24 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
         </button>
 
         <div className="relative shrink-0">
-          <img
-            src={contact.user?.avatar || "/placeholder.svg"}
-            alt={contact.user?.name}
-            className="w-9 h-9 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
-          />
+          {contact.user?.avatar ? (
+            <img
+              src={contact.user.avatar}
+              alt={contact.user?.name}
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-black/10 dark:bg-white/10 ring-2 ring-black/5 dark:ring-white/5 flex items-center justify-center">
+              <span className="text-xs font-semibold text-black/60 dark:text-white/60">
+                {contact.user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -132,7 +177,7 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
             {contact.user?.name}
           </p>
           <p className="text-black/40 dark:text-white/40 text-xs">
-            {contact.user?.username}
+            {isOnline ? "Online" : contact.user?.username}
           </p>
         </div>
 
@@ -149,31 +194,54 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.mine ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
-                msg.mine
+        {messages.map((msg, index) => {
+          const prev = messages[index - 1];
+          const showSeparator = !prev || getDateLabel(msg.createdAt) !== getDateLabel(prev.createdAt);
+
+          return (
+            <div key={msg.id}>
+              {showSeparator && (
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-black/8 dark:bg-white/8" />
+                  <span className="text-xs text-black/30 dark:text-white/30 font-medium shrink-0">
+                    {getDateLabel(msg.createdAt)}
+                  </span>
+                  <div className="flex-1 h-px bg-black/8 dark:bg-white/8" />
+                </div>
+              )}
+
+              <div className={`flex ${msg.mine ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${msg.mine
                   ? "bg-black dark:bg-white text-white dark:text-black rounded-br-sm"
                   : "bg-black/5 dark:bg-white/5 text-black dark:text-white rounded-bl-sm"
-              }`}
-            >
-              <p>{msg.text}</p>
-              <p
-                className={`text-xs mt-1 ${
-                  msg.mine
-                    ? "text-white/50 dark:text-black/50"
-                    : "text-black/30 dark:text-white/30"
-                }`}
-              >
-                {msg.time}
-              </p>
+                  }`}>
+                  <p>{msg.text}</p>
+                  <p className={`text-xs mt-1 ${msg.mine ? "text-white/50 dark:text-black/50" : "text-black/30 dark:text-white/30"
+                    }`}>
+                    {msg.time}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {typingUsers.length > 0 && (
+          <div className="flex justify-start">
+            <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm bg-black/5 dark:bg-white/5">
+              <div className="flex items-center gap-1">
+                {[0, 150, 300].map((delay) => (
+                  <span
+                    key={delay}
+                    style={{ animationDelay: `${delay}ms` }}
+                    className="w-1.5 h-1.5 rounded-full bg-black/40 dark:bg-white/40 animate-bounce"
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        ))}
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -183,7 +251,10 @@ export function ChatView({ contact, onBack, currentUserId }: Props) {
             type="text"
             placeholder="Message..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              onInputChange();
+            }}
             onKeyDown={(e) => e.key === "Enter" && send()}
             className="flex-1 px-4 py-2.5 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-black dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30 outline-none focus:ring-1 focus:ring-black dark:focus:ring-white text-sm transition-all"
           />

@@ -164,8 +164,6 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
       c.user.name?.toLowerCase().includes(search.toLowerCase())
     );
   });
-  console.log("[ChatSidebar] onlineUsers:", [...onlineUsers]);
-console.log("[ChatSidebar] contact userIds:", filtered.map(c => c.user.id));
   return (
     <div className="flex flex-col h-full bg-white dark:bg-black border-r border-black/8 dark:border-white/8 w-full">
       <div className="px-5 pt-8 pb-4">
@@ -215,11 +213,11 @@ console.log("[ChatSidebar] contact userIds:", filtered.map(c => c.user.id));
                     alt={contact.user?.name}
                     className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
                   /> :
-                    <div
-                      className="flex w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5 items-center justify-center text-xl font-semibold"
-                    >
-                      {getInitials(contact.user.name)}
-                    </div>
+                  <div className="w-9 h-9 rounded-full bg-black/10 dark:bg-white/10 ring-2 ring-black/5 dark:ring-white/5 flex items-center justify-center">
+                  <span className="text-xs font-semibold text-black/60 dark:text-white/60">
+                    {getInitials(contact.user.name)}
+                  </span>
+                </div>
                   }
                   {onlineUsers.has(contact.user.id) && (
                     <span className={`absolute bottom-0 right-0 w-3 h-3 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black`} />
