@@ -10,13 +10,26 @@ interface AuthState {
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  refreshToken: () => Promise<boolean>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   setUser: (user) => set({ user }),
   logout: () => set({ user: null, loading: false }),
   loading: false,
+
+  refreshToken: async () => {
+    try {
+      await authApi.refresh();           
+      const data = await authApi.getUser();
+      set({ user: data.user });
+      return true;
+    } catch {
+      get().logout();
+      return false;
+    }
+  },
 
   signup: async (name, email, password) => {
     try {
@@ -24,7 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await authApi.sign(name, email, password);
       const data = await authApi.getUser();
       set({ user: data.user, loading: false });
-      toast.success("Signup successful ");
+      toast.success("Signup successful");
       return true;
     } catch (err) {
       console.error("Signup error:", err);
@@ -34,6 +47,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
     }
   },
+
   login: async (email, password) => {
     try {
       set({ loading: true });

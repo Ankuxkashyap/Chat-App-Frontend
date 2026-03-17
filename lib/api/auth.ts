@@ -27,4 +27,8 @@ export const authApi = {
     });
     return res.data;
   },
+  refresh: async () => {
+    const res = await api.post("/auth/refresh", {}, { withCredentials: true });
+    return res.data;
+  },
 };
