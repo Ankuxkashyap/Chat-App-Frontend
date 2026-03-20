@@ -5,6 +5,7 @@ import { UserT } from "@/lib/types/user";
 
 interface AuthState {
   user: UserT | null;
+  token:string | null;
   setUser: (user: UserT) => void;
   logout: () => void;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
@@ -15,6 +16,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
+  token:null,
   setUser: (user) => set({ user }),
   logout: () => set({ user: null, loading: false }),
   loading: false,
@@ -36,6 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: true });
       await authApi.sign(name, email, password);
       const data = await authApi.getUser();
+      set({ token: data.access_token });
       set({ user: data.user, loading: false });
       toast.success("Signup successful");
       return true;
@@ -53,7 +56,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: true });
       await authApi.login(email, password);
       const data = await authApi.getUser();
-      set({ user: data.user, loading: false });
+      set({ token: data.access_token });
+      set({ user: data.user,loading: false });
       toast.success("Login successful");
       return true;
     } catch (err) {
