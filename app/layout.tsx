@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SocketProvider } from "@/components/SocketProvider";
+import { ChatSidebar } from "@/components/ChatSidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,7 +41,7 @@ export default function RootLayout({
           <Toaster />
           <Navbar />
           <SocketProvider>
-          <div className="pt-16">{children}</div>
+            <div className="pt-16">{children}</div>
           </SocketProvider>
         </ThemeProvider>
       </body>
