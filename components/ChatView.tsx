@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Phone, Video, MoreHorizontal, Send, Check, CheckCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Phone,
+  Video,
+  MoreHorizontal,
+  Send,
+  Check,
+  CheckCheck,
+} from "lucide-react";
 import { Contact } from "@/components/ChatSidebar";
 import { useSocket } from "@/hooks/useSocket";
 import { useTyping } from "@/hooks/useTyping";
@@ -34,7 +42,6 @@ type Props = {
   contact: Contact;
   onBack: () => void;
   currentUserId: string;
-  currentUsername: string;
 };
 
 const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
@@ -50,7 +57,13 @@ const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
 });
 
 // ── Status Icon ───────────────────────────────────────────────────────────────
-function MessageStatusIcon({ status, mine }: { status: MessageStatus; mine: boolean }) {
+function MessageStatusIcon({
+  status,
+  mine,
+}: {
+  status: MessageStatus;
+  mine: boolean;
+}) {
   if (!mine) return null;
 
   if (status === "SEEN") {
@@ -76,7 +89,12 @@ function MessageStatusIcon({ status, mine }: { status: MessageStatus; mine: bool
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export function ChatView({ contact, onBack, currentUserId, currentUsername }: Props) {
+export function ChatView({
+  contact,
+  onBack,
+  currentUserId,
+  currentUsername,
+}: Props) {
   const { id } = useParams();
   const conversationId = id as string;
   const socket = useSocket();
@@ -114,7 +132,7 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
   const { typingUsers, onInputChange, stopTyping } = useTyping(
     socket,
     conversationId,
-    { id: currentUserId, username: currentUsername }
+    { id: currentUserId, username: currentUsername },
   );
 
   // ── Fetch + socket events ───────────────────────────────────────────────────
@@ -126,7 +144,9 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
         const res = await messageApi.getmessage(conversationId);
         const raw = res?.data?.data ?? res?.data ?? res ?? [];
         const data = Array.isArray(raw) ? raw : [];
-        const mapped = data.map((msg: ApiMessage) => mapApiMessage(msg, currentUserId));
+        const mapped = data.map((msg: ApiMessage) =>
+          mapApiMessage(msg, currentUserId),
+        );
         setMessages(mapped);
 
         // Mark all incoming messages as DELIVERED on load
@@ -158,7 +178,7 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
         // It's our own message arriving via socket — replace oldest optimistic
         if (mapped.mine) {
           const optimisticIndex = prev.findIndex((m) =>
-            m.id.startsWith("optimistic-")
+            m.id.startsWith("optimistic-"),
           );
           if (optimisticIndex !== -1) {
             const next = [...prev];
@@ -183,8 +203,8 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
     socket.on("messageStatusUpdated", (updated: ApiMessage) => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === updated.id ? { ...m, status: updated.status } : m
-        )
+          m.id === updated.id ? { ...m, status: updated.status } : m,
+        ),
       );
     });
 
@@ -192,8 +212,8 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
     socket.on("messagesSeenBatch", (data: { messageIds: string[] }) => {
       setMessages((prev) =>
         prev.map((m) =>
-          data.messageIds.includes(m.id) ? { ...m, status: "SEEN" } : m
-        )
+          data.messageIds.includes(m.id) ? { ...m, status: "SEEN" } : m,
+        ),
       );
     });
 
@@ -232,7 +252,10 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
     if (!input.trim()) return;
     const messageData = input.trim();
     const now = new Date();
-    const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const time = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     const optimisticMessage: Message = {
       id: `optimistic-${Date.now()}`,
@@ -261,7 +284,7 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
         }
         // Otherwise swap optimistic → real
         return prev.map((m) =>
-          m.id === optimisticMessage.id ? realMessage : m
+          m.id === optimisticMessage.id ? realMessage : m,
         );
       });
 
@@ -331,7 +354,8 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
         {messages.map((msg, index) => {
           const prev = messages[index - 1];
           const showSeparator =
-            !prev || getDateLabel(msg.createdAt) !== getDateLabel(prev.createdAt);
+            !prev ||
+            getDateLabel(msg.createdAt) !== getDateLabel(prev.createdAt);
 
           return (
             <div key={msg.id}>
@@ -345,7 +369,9 @@ export function ChatView({ contact, onBack, currentUserId, currentUsername }: Pr
                 </div>
               )}
 
-              <div className={`flex ${msg.mine ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`flex ${msg.mine ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
                     msg.mine

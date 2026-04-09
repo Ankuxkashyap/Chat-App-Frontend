@@ -2,10 +2,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { ChatView } from "@/components/ChatView";
-import { ChatSidebar, Contact } from "@/components/ChatSidebar";
 import { useState, useEffect } from "react";
 import { messageApi } from "@/lib/api/message";
 import { useAuthStore } from "@/store/auth";
+import { Contact } from "@/components/ChatSidebar";
 
 export default function ChatPage() {
   const { id } = useParams();
@@ -33,9 +33,9 @@ export default function ChatPage() {
     fetchConversation();
   }, [id]);
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="h-[calc(100vh-64px)] flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <div
@@ -47,25 +47,14 @@ export default function ChatPage() {
         </div>
       </div>
     );
-  }
 
   if (!contact) return null;
 
   return (
-    <div className="h-[calc(100vh-64px)] flex bg-white dark:bg-black overflow-hidden">
-      <div className="hidden md:flex w-80 shrink-0">
-        <ChatSidebar
-          selectedId={contact.conversationId}
-          onSelect={(c) => router.push(`/chat/${c.conversationId}`)}
-        />
-      </div>
-      <div className="flex flex-1">
-        <ChatView
-          contact={contact}
-          currentUserId={user?.id ?? ""}
-          onBack={() => router.back()}
-        />
-      </div>
-    </div>
+    <ChatView
+      contact={contact}
+      currentUserId={user?.id ?? ""}
+      onBack={() => router.back()}
+    />
   );
 }

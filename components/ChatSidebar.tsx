@@ -5,6 +5,8 @@ import { Search, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { messageApi } from "@/lib/api/message";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
+import { get } from "http";
+import { getSocket } from "@/lib/api/socket";
 
 type MessageStatus = "SENT" | "DELIVERED" | "SEEN";
 
@@ -58,7 +60,12 @@ function formatTime(dateStr?: string): string {
 
 function getInitials(name: string): string {
   if (!name) return "?";
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 type Props = {
@@ -92,17 +99,49 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
         setLoading(false);
       }
     };
+
     fetchConversations();
-  }, []);
+
+    const socket = getSocket();
+
+    const handleConversationUpdated = (payload: {
+      conversationId: string;
+      lastMessage: Contact["lastMessage"];
+      updatedAt: string;
+    }) => {
+      setContacts((prev) => {
+        const updated = prev.map((c) => {
+          if (c.conversationId !== payload.conversationId) return c;
+          const isActive = c.conversationId === selectedId;
+          return {
+            ...c,
+            lastMessage: payload.lastMessage,
+            unreadCount: isActive ? 0 : c.unreadCount + 1,
+            updatedAt: payload.updatedAt,
+          };
+        });
+        return [...updated].sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        );
+      });
+    };
+
+    socket?.on("conversation_updated", handleConversationUpdated);
+
+    return () => {
+      socket?.off("conversation_updated", handleConversationUpdated);
+    };
+  }, [selectedId]);
 
   const handleSelect = (contact: Contact) => {
-    // Zero out badge immediately when user opens the chat
+    if (contact.conversationId === selectedId) return;
     setContacts((prev) =>
       prev.map((c) =>
         c.conversationId === contact.conversationId
           ? { ...c, unreadCount: 0 }
-          : c
-      )
+          : c,
+      ),
     );
     onSelect?.(contact);
     router.push(`/chat/${contact.conversationId}`);
@@ -160,10 +199,11 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                 <button
                   key={contact.conversationId}
                   onClick={() => handleSelect(contact)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 text-left ${isSelected
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 text-left ${
+                    isSelected
                       ? "bg-black/5 dark:bg-white/5"
                       : "hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                    }`}
+                  }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
@@ -191,21 +231,23 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                     {/* Top row: name + time */}
                     <div className="flex items-center justify-between gap-2">
                       <p
-                        className={`text-sm tracking-tight truncate ${hasUnread
+                        className={`text-sm tracking-tight truncate ${
+                          hasUnread
                             ? "font-bold text-black dark:text-white"
                             : "font-semibold text-black dark:text-white"
-                          }`}
+                        }`}
                       >
                         {contact.user.name}
                       </p>
                       <span
-                        className={`text-xs shrink-0 ${hasUnread
+                        className={`text-xs shrink-0 ${
+                          hasUnread
                             ? "text-black dark:text-white font-semibold"
                             : "text-black/30 dark:text-white/30"
-                          }`}
+                        }`}
                       >
                         {formatTime(
-                          contact.lastMessage?.createdAt ?? contact.updatedAt
+                          contact.lastMessage?.createdAt ?? contact.updatedAt,
                         )}
                       </span>
                     </div>
@@ -213,10 +255,11 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                     {/* Bottom row: preview + badge */}
                     <div className="flex items-center justify-between gap-2 mt-0.5">
                       <p
-                        className={`text-xs truncate ${hasUnread
+                        className={`text-xs truncate ${
+                          hasUnread
                             ? "text-black dark:text-white font-medium"
                             : "text-black/40 dark:text-white/40"
-                          }`}
+                        }`}
                       >
                         {contact.lastMessage?.content ?? "No messages yet"}
                       </p>
