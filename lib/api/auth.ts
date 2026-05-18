@@ -31,4 +31,7 @@ export const authApi = {
     const res = await api.post("/auth/refresh", {}, { withCredentials: true });
     return res.data;
   },
+  googleLogin: () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
+  },
 };

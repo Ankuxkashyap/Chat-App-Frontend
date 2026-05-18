@@ -13,7 +13,7 @@ const sora = Sora({
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const { loading, login, signup } = useAuthStore();
+  const { loading, login, signup, googleLogin } = useAuthStore();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -132,6 +132,7 @@ export default function AuthPage() {
         </div>
 
         <button
+          onClick={googleLogin}
           className="w-full border bg-background hover:bg-accent 
           rounded-lg py-2.5 text-sm font-medium transition-all"
         >

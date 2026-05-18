@@ -5,25 +5,26 @@ import { UserT } from "@/lib/types/user";
 
 interface AuthState {
   user: UserT | null;
-  token:string | null;
+  token: string | null;
   setUser: (user: UserT) => void;
   logout: () => void;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   refreshToken: () => Promise<boolean>;
+  googleLogin: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token:null,
+  token: null,
   setUser: (user) => set({ user }),
   logout: () => set({ user: null, loading: false }),
   loading: false,
 
   refreshToken: async () => {
     try {
-      await authApi.refresh();           
+      await authApi.refresh();
       const data = await authApi.getUser();
       set({ user: data.user });
       return true;
@@ -57,7 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await authApi.login(email, password);
       const data = await authApi.getUser();
       set({ token: data.access_token });
-      set({ user: data.user,loading: false });
+      set({ user: data.user, loading: false });
       toast.success("Login successful");
       return true;
     } catch (err) {
@@ -67,5 +68,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       set({ loading: false });
     }
+  },
+  googleLogin: () => {
+    authApi.googleLogin();
   },
 }));
