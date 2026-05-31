@@ -5,6 +5,10 @@ export const requestApi = {
     const res = await api.get("/friendship/requests");
     return res.data;
   },
+  send: async (id: string) => {
+    const res = await api.post(`/friendship/request/${id}`);
+    return res.data;
+  },
   accept: async (id: string) => {
     const res = await api.post(`/friendship/request/${id}`);
     return res.data;
