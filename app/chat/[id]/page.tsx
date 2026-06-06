@@ -54,6 +54,7 @@ export default function ChatPage() {
     <ChatView
       contact={contact}
       currentUserId={user?.id ?? ""}
+      currentUsername={user?.username ?? ""}
       onBack={() => router.back()}
     />
   );

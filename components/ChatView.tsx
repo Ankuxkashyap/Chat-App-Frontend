@@ -16,6 +16,7 @@ import { useTyping } from "@/hooks/useTyping";
 import { messageApi } from "@/lib/api/message";
 import { useParams } from "next/navigation";
 import { getDateLabel } from "@/helper/getDateLabel";
+import Image from "next/image";
 
 type MessageStatus = "SENT" | "DELIVERED" | "SEEN";
 
@@ -42,6 +43,7 @@ type Props = {
   contact: Contact;
   onBack: () => void;
   currentUserId: string;
+  currentUsername: string;
 };
 
 const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
@@ -142,8 +144,7 @@ export function ChatView({
     const fetchMessages = async () => {
       try {
         const res = await messageApi.getmessage(conversationId);
-        const raw = res?.data?.data ?? res?.data ?? res ?? [];
-        const data = Array.isArray(raw) ? raw : [];
+        const data = Array.isArray(res) ? res : [];
         const mapped = data.map((msg: ApiMessage) =>
           mapApiMessage(msg, currentUserId),
         );
@@ -223,7 +224,7 @@ export function ChatView({
       socket.off("messageStatusUpdated");
       socket.off("messagesSeenBatch");
     };
-  }, [conversationId, socket]);
+  }, [contact.user?.id, conversationId, currentUserId, socket]);
 
   // ── Mark messages as SEEN when chat is open (batched) ─────────────────────
   useEffect(() => {
@@ -288,7 +289,7 @@ export function ChatView({
         );
       });
 
-      socket.emit("sendMessage", { conversationId, content: messageData });
+      socket?.emit("sendMessage", { conversationId, content: messageData });
     } catch (err) {
       console.error("Failed to send message:", err);
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
@@ -309,9 +310,11 @@ export function ChatView({
 
         <div className="relative shrink-0">
           {contact.user?.avatar ? (
-            <img
+            <Image
               src={contact.user.avatar}
-              alt={contact.user?.name}
+              alt={contact.user?.name ?? ""}
+              width={36}
+              height={36}
               className="w-9 h-9 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
             />
           ) : (
@@ -436,7 +439,7 @@ export function ChatView({
               onInputChange();
             }}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            className="flex-1 px-4 py-2.5 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-black dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30 outline-none focus:ring-1 focus:ring-black dark:focus:ring-white text-sm transition-all"
+            className="flex-1 px-4 py-2.5 rounded-full border border-black/10 dark:border-white/10 bg-black/2 dark:bg-white/[0.02] text-black dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30 outline-none focus:ring-1 focus:ring-black dark:focus:ring-white text-sm transition-all"
           />
           <button
             onClick={send}

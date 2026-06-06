@@ -8,15 +8,23 @@ import { useAuthStore } from "@/store/auth";
 
 export default function Home() {
   const [selected, setSelected] = useState<Contact | null>(null);
-  const {user} = useAuthStore()
+  const { user } = useAuthStore();
   return (
     <div className="w-full h-[calc(100vh-64px)] flex bg-white dark:bg-black overflow-hidden">
       <div className="w-full md:w-80 md:flex shrink-0">
-        <ChatSidebar selectedId={selected?.conversationId ?? null} onSelect={setSelected} />
+        <ChatSidebar
+          selectedId={selected?.conversationId ?? null}
+          onSelect={setSelected}
+        />
       </div>
       <div className="hidden md:flex flex-1">
         {selected ? (
-          <ChatView contact={selected} onBack={() => setSelected(null)} currentUserId={user?.id ?? ""} />
+          <ChatView
+            contact={selected}
+            onBack={() => setSelected(null)}
+            currentUserId={user?.id ?? ""}
+            currentUsername={user?.username ?? ""}
+          />
         ) : (
           <EmptyChat />
         )}

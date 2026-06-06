@@ -5,9 +5,9 @@ import { connectSocket } from "@/lib/api/socket";
 import { useAuthStore } from "@/store/auth";
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-    const { user } = useAuthStore();
+  const { user } = useAuthStore();
   useEffect(() => {
-    connectSocket(user?.id);
+    connectSocket(user?.id ?? "");
   }, [user?.id]);
 
   return <>{children}</>;
