@@ -7,6 +7,7 @@ import { RequestT, UserT } from "@/lib/types/user";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { userApi } from "@/lib/api/user";
+import { friendApi } from "@/lib/api/friend";
 
 export default function FollowRequests() {
   const [requests, setRequests] = useState<RequestT[]>([]);
@@ -14,6 +15,20 @@ export default function FollowRequests() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<UserT[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const res = await friendApi.get(1, 100);
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        setFriendIds(new Set(list.map((u: UserT) => u.id)));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchFriends();
+  }, []);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -86,6 +101,7 @@ export default function FollowRequests() {
     try {
       await requestApi.send(id);
       toast.success("Friend request sent");
+      setFriendIds((prev) => new Set(prev).add(id));
     } catch (err) {
       toast.error("Failed to send request");
     }
@@ -93,12 +109,12 @@ export default function FollowRequests() {
 
   const Avatar = ({ name, avatar }: { name: string; avatar?: string }) =>
     avatar ? (
-      <img
+      <Image
         src={avatar}
         alt={name}
         width={44}
         height={44}
-        className="rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
+        className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
       />
     ) : (
       <div className="w-11 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-semibold ring-2 ring-black/10 dark:ring-white/10">
@@ -171,12 +187,14 @@ export default function FollowRequests() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleAddFriend(user.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:bg-black hover:text-white hover:border-black dark:hover:bg-white dark:hover:text-black dark:hover:border-white transition-all duration-200"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                </button>
+                {!friendIds.has(user.id) && (
+                  <button
+                    onClick={() => handleAddFriend(user.id)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:bg-black hover:text-white hover:border-black dark:hover:bg-white dark:hover:text-black dark:hover:border-white transition-all duration-200"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))
           )

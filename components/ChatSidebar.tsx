@@ -73,6 +73,25 @@ type Props = {
   selectedId: string | null;
   onSelect?: (contact: Contact) => void;
 };
+const Avatar = ({ name, avatar }: { name: string; avatar?: string }) =>
+  avatar ? (
+    <Image
+      src={avatar}
+      alt={name}
+      width={44}
+      height={44}
+      className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
+    />
+  ) : (
+    <div className="w-11 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-semibold ring-2 ring-black/10 dark:ring-white/10">
+      {name
+        ?.split(" ")
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)}
+    </div>
+  );
 
 export function ChatSidebar({ selectedId, onSelect }: Props) {
   const [search, setSearch] = useState("");
@@ -208,22 +227,10 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                    {contact.user.avatar ? (
-                      <Image
-                        src={contact.user.avatar}
-                        alt={contact.user.name}
-                        width={44}
-                        height={44}
-                        className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
-                      />
-                    ) : (
-                      <div className="w-11 h-11 rounded-full bg-black/10 dark:bg-white/10 ring-2 ring-black/5 dark:ring-white/5 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-black/60 dark:text-white/60">
-                          {getInitials(contact.user.name)}
-                        </span>
-                      </div>
-                    )}
-                    {/* Online dot */}
+                    <Avatar
+                      name={contact.user.name}
+                      avatar={contact.user.avatar}
+                    />
                     {onlineUsers.has(contact.user.id) && (
                       <span className="absolute bottom-0 right-0 w-3 h-3 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black" />
                     )}
