@@ -7,6 +7,7 @@ import { messageApi } from "@/lib/api/message";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 import { get } from "http";
 import { getSocket } from "@/lib/api/socket";
+import Image from "next/image";
 
 type MessageStatus = "SENT" | "DELIVERED" | "SEEN";
 
@@ -208,9 +209,11 @@ export function ChatSidebar({ selectedId, onSelect }: Props) {
                   {/* Avatar */}
                   <div className="relative shrink-0">
                     {contact.user.avatar ? (
-                      <img
+                      <Image
                         src={contact.user.avatar}
                         alt={contact.user.name}
+                        width={44}
+                        height={44}
                         className="w-11 h-11 rounded-full object-cover ring-2 ring-black/5 dark:ring-white/5"
                       />
                     ) : (
