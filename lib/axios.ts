@@ -2,10 +2,13 @@ import axios from "axios";
 import { useAuthStore } from "@/store/auth";
 
 const api = axios.create({
-  baseURL: process.env.BACKEND_URL || "http://localhost:3002",
+  baseURL:
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "https://chat-app-backend-xkql.onrender.com",
   withCredentials: true,
 });
-
+console.log("API Base URL:", api.defaults.baseURL);
+console.log("API Base URL:", process.env.NEXT_PUBLIC_BACKEND_URL);
 // api.interceptors.request.use((config) => {
 //   const token = useAuthStore.getState().token;
 //   if (token) {
@@ -27,11 +30,7 @@ api.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-           await api.post(
-            "/auth/refresh",
-            {},
-            { withCredentials: true }
-          );
+          await api.post("/auth/refresh", {}, { withCredentials: true });
         } catch (e) {
           return Promise.reject(e);
         } finally {
@@ -39,11 +38,11 @@ api.interceptors.response.use(
         }
       }
 
-      return api(req); 
+      return api(req);
     }
 
     return Promise.reject(err);
-  }
+  },
 );
 
 export default api;

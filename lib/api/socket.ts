@@ -12,7 +12,11 @@ export const disconnectSocket = () => {
 };
 
 export const connectSocket = (userId: string) => {
-  if (socket?.connected && socket.auth && (socket.auth as any).userId === userId) {
+  if (
+    socket?.connected &&
+    socket.auth &&
+    (socket.auth as any).userId === userId
+  ) {
     console.log("[socket] already connected with same userId, skipping");
     return;
   }
@@ -22,11 +26,15 @@ export const connectSocket = (userId: string) => {
     socket = null;
   }
 
-  socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3002", {
-    autoConnect: false,
-    withCredentials: true,
-    auth: { userId },
-  });
+  socket = io(
+    process.env.NEXT_PUBLIC_SOCKET_URL ||
+      "https://chat-app-backend-xkql.onrender.com",
+    {
+      autoConnect: false,
+      withCredentials: true,
+      auth: { userId },
+    },
+  );
 
   socket.connect();
 };
