@@ -29,9 +29,10 @@ export const authApi = {
   },
   refresh: async () => {
     const res = await api.post("/auth/refresh", {}, { withCredentials: true });
+    console.log("Token refreshed:", res.data);
     return res.data;
   },
   googleLogin: () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
+    window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/google`;
   },
 };
