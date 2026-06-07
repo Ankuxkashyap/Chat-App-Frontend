@@ -58,7 +58,6 @@ const mapApiMessage = (msg: ApiMessage, currentUserId: string): Message => ({
   }),
 });
 
-// ── Status Icon ───────────────────────────────────────────────────────────────
 function MessageStatusIcon({
   status,
   mine,
@@ -82,7 +81,6 @@ function MessageStatusIcon({
       </span>
     );
   }
-  // SENT
   return (
     <span className="inline-flex items-center" title="Sent">
       <Check className="w-3 h-3 text-white/50 dark:text-black/50" />
@@ -90,7 +88,6 @@ function MessageStatusIcon({
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
 export function ChatView({
   contact,
   onBack,
@@ -105,7 +102,6 @@ export function ChatView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [isOnline, setIsOnline] = useState(false);
 
-  // ── Online presence ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
 
@@ -130,27 +126,30 @@ export function ChatView({
     };
   }, [socket, contact.user?.id]);
 
-  // ── Typing ──────────────────────────────────────────────────────────────────
   const { typingUsers, onInputChange, stopTyping } = useTyping(
     socket,
     conversationId,
     { id: currentUserId, username: currentUsername },
   );
 
-  // ── Fetch + socket events ───────────────────────────────────────────────────
   useEffect(() => {
     if (!conversationId || !socket) return;
 
     const fetchMessages = async () => {
       try {
         const res = await messageApi.getmessage(conversationId);
-        const data = Array.isArray(res) ? res : [];
-        const mapped = data.map((msg: ApiMessage) =>
+        console.log("RAW API response:", res);
+
+        const raw = (res as any)?.data ?? res;
+        const list = Array.isArray(raw) ? raw : [];
+
+        console.log("Messages array:", list);
+
+        const mapped = list.map((msg: ApiMessage) =>
           mapApiMessage(msg, currentUserId),
         );
         setMessages(mapped);
 
-        // Mark all incoming messages as DELIVERED on load
         mapped
           .filter((m: Message) => !m.mine && m.status === "SENT")
           .forEach((m: Message) => {
@@ -167,16 +166,13 @@ export function ChatView({
     fetchMessages();
     socket.emit("joinConversation", conversationId);
 
-    // New incoming message
     socket.on("newMessage", (msg: ApiMessage) => {
       const mapped = mapApiMessage(msg, currentUserId);
 
       setMessages((prev) => {
-        // Already exists — just update status, no duplicate
         const exists = prev.some((m) => m.id === msg.id);
         if (exists) return prev.map((m) => (m.id === msg.id ? mapped : m));
 
-        // It's our own message arriving via socket — replace oldest optimistic
         if (mapped.mine) {
           const optimisticIndex = prev.findIndex((m) =>
             m.id.startsWith("optimistic-"),
@@ -191,7 +187,6 @@ export function ChatView({
         return [...prev, mapped];
       });
 
-      // Auto-emit delivered for incoming messages
       if (!mapped.mine) {
         socket.emit("messageDelivered", {
           messageId: msg.id,
@@ -200,7 +195,6 @@ export function ChatView({
       }
     });
 
-    // Status update from backend
     socket.on("messageStatusUpdated", (updated: ApiMessage) => {
       setMessages((prev) =>
         prev.map((m) =>
@@ -209,7 +203,6 @@ export function ChatView({
       );
     });
 
-    // Seen — batch update from backend
     socket.on("messagesSeenBatch", (data: { messageIds: string[] }) => {
       setMessages((prev) =>
         prev.map((m) =>
@@ -226,7 +219,6 @@ export function ChatView({
     };
   }, [contact.user?.id, conversationId, currentUserId, socket]);
 
-  // ── Mark messages as SEEN when chat is open (batched) ─────────────────────
   useEffect(() => {
     if (!socket || messages.length === 0) return;
 
@@ -236,19 +228,16 @@ export function ChatView({
 
     if (unseenIds.length === 0) return;
 
-    // Single emit with all IDs → prevents concurrent DB writes / P2034 deadlock
     socket.emit("markAsSeen", {
       messageIds: unseenIds,
       senderId: contact.user?.id,
     });
   }, [messages, socket, contact.user?.id]);
 
-  // ── Auto scroll ─────────────────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Send ────────────────────────────────────────────────────────────────────
   const send = async () => {
     if (!input.trim()) return;
     const messageData = input.trim();
@@ -277,13 +266,10 @@ export function ChatView({
       const realMessage = mapApiMessage(savedMsg, currentUserId);
 
       setMessages((prev) => {
-        // Socket newMessage event may have already added the real message —
-        // if so, just drop the optimistic one to avoid duplicate keys
         const realAlreadyExists = prev.some((m) => m.id === realMessage.id);
         if (realAlreadyExists) {
           return prev.filter((m) => m.id !== optimisticMessage.id);
         }
-        // Otherwise swap optimistic → real
         return prev.map((m) =>
           m.id === optimisticMessage.id ? realMessage : m,
         );
@@ -296,10 +282,8 @@ export function ChatView({
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-black h-[calc(100vh-64px)]">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-black/8 dark:border-white/8">
         <button
           onClick={onBack}
@@ -352,7 +336,6 @@ export function ChatView({
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.map((msg, index) => {
           const prev = messages[index - 1];
@@ -384,7 +367,6 @@ export function ChatView({
                 >
                   <p>{msg.text}</p>
 
-                  {/* Time + Status */}
                   <div
                     className={`flex items-center gap-1 mt-1 ${
                       msg.mine ? "justify-end" : "justify-start"
@@ -407,7 +389,6 @@ export function ChatView({
           );
         })}
 
-        {/* Typing indicator */}
         {typingUsers.length > 0 && (
           <div className="flex justify-start">
             <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm bg-black/5 dark:bg-white/5">
@@ -427,7 +408,6 @@ export function ChatView({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="px-4 py-3 border-t border-black/8 dark:border-white/8">
         <div className="flex items-center gap-2">
           <input
